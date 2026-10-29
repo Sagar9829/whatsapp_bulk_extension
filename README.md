@@ -1,100 +1,75 @@
 # WhatsApp Bulk Sender + Tracker — Setup Guide
 
-Ye extension tumhare saare features cover karta hai:
+This extension includes the following features:
 
-1. **Internet connect hote hi info** — Extension install hote hi aur phir har 5 minute me
-   server ko heartbeat bhejta hai (online/offline + last seen). Agar heartbeat ruk
-   jaye to samjho browser band hai ya system offline hai.
-2. **Client details pehle se** — `extension/config.js` me har client ka domain,
-   brand/company naam aur mobile daal do, phir extension usko de do. Dashboard par
-   har activation ke saath us client ki details dikhegi.
-3. **Kitne browsers / kitne systems** — Dashboard par 3 alag numbers: total
-   browsers (activations), total systems (alag device fingerprints), aur online now.
-4. **Bulk sender + server report** — Number list + pehle se bane templates se
-   WhatsApp Web par bulk send, aur har number ka result (sent/failed, kaunsa
-   template) server par save — dashboard par dikhega.
+1. **Online status and heartbeat** — The extension sends a heartbeat when it is installed and every 5 minutes, including online/offline status and last-seen time. If the heartbeat stops, the browser may be closed or the system may be offline.
+2. **Client details** — Add each client's domain, brand/company name, and mobile number in `extension/config.js`. The dashboard displays these details for each activation.
+3. **Browser and system counts** — The dashboard shows total browser activations, total systems (based on device fingerprints), and currently online systems.
+4. **Bulk messaging and reports** — Send messages to a list of numbers using saved templates on WhatsApp Web. The server records each number's result (sent or failed, and which template was used), and the dashboard displays the results.
 
-## Files
+## Project files
 
-```
+```text
 extension/
-  manifest.json   — Chrome extension ka manifest (Manifest V3)
-  config.js       — HAR CLIENT KE LIYE EDIT KARO (server URL, client details, key)
-  background.js   — activation, heartbeat, bulk send loop
-  content.js      — WhatsApp Web par Send button dabana
-  popup.html/js   — extension ka popup (numbers, templates, Start/Stop)
+  manifest.json   — Chrome extension manifest (Manifest V3)
+  config.js       — Edit for each client (server URL, client details, and API key)
+  background.js   — Activation, heartbeat, and bulk-send loop
+  content.js      — Handles the Send button on WhatsApp Web
+  popup.html/js   — Extension popup (numbers, templates, Start/Stop)
 server-node/
-  server.js, package.json, dashboard.html   — Node.js server (VPS / Node hosting)
+  server.js, package.json, dashboard.html — Node.js server (VPS or Node.js hosting)
 server-php/
-  api.php, dashboard.html                   — PHP server (shared hosting / cPanel)
+  api.php, dashboard.html — PHP server (shared hosting / cPanel)
 ```
 
-## Step 1 — Server apne hosting domain par daalo (ek option chuno)
+## Step 1 — Deploy the server
 
-**Option A — PHP (aasan, shared hosting par chalega):**
-1. `server-php/` ke dono files (`api.php`, `dashboard.html`) ko apne domain par
-   ek folder me daalo, jaise `https://YOUR-DOMAIN.COM/wa/`.
-2. `api.php` me upar `API_KEY` badlo, aur `dashboard.html` me bhi wahi key daalo.
-3. `data.json` writable hona chahiye — folder ko 777 ya file ko 666 kar do
-   (cPanel File Manager se). Pehli request par file khud ban jayegi.
-4. Dashboard kholo: `https://YOUR-DOMAIN.COM/wa/dashboard.html`
+Choose one of the following options.
 
-**Option B — Node.js (VPS / Node support wali hosting):**
-1. `server-node/` folder server par daalo, `npm install` chalao.
-2. `API_KEY` environment variable set karo (ya server.js me badlo — teeno jagah
-   same key honi chahiye: server, extension config, dashboard).
-3. `node server.js` (ya pm2 se) chalao. Dashboard: `http://domain:3000/dashboard.html`
-   (domain ke saath reverse proxy lagana ho to apne hisaab se kar lena).
+**Option A — PHP (works with shared hosting)**
 
-## Step 2 — Extension me client details daalo (har client ke liye alag)
+1. Upload `api.php` and `dashboard.html` from `server-php/` to a folder on your domain, for example `https://YOUR-DOMAIN.COM/wa/`.
+2. Change `API_KEY` near the top of `api.php`, and use the same key in `dashboard.html`.
+3. Make sure the data file can be written to by PHP. Set appropriate permissions through cPanel File Manager; avoid overly broad permissions where possible. The file should be created automatically on the first request.
+4. Open the dashboard at `https://YOUR-DOMAIN.COM/wa/dashboard.html`.
 
-1. `extension/config.js` kholo:
-   - `serverUrl` = apna domain (PHP wale `wa` folder ka URL, aakhri `/` nahi)
-   - `serverType` = `"php"` ya `"node"`
-   - `apiKey` = wahi secret key jo server par daali hai
-   - `client.domain`, `client.brand`, `client.mobile` = US client ki details
-   - `templates` me apne templates daal sakte ho (`{brand}` ki jagah brand aa jayega)
-2. `extension/manifest.json` me `host_permissions` me apna domain daalo:
-   `"https://YOUR-DOMAIN.COM/*"` ki jagah apna asli domain
-   (PHP wale folder ka domain bhi chalega, jaise `https://YOUR-DOMAIN.COM/wa/*`).
-3. Har client ke liye ye 2 files edit karke `extension/` folder ka alag zip banao
-   aur client ko de do. (Icons optional hain — bina icons ke bhi chalega.)
+**Option B — Node.js (VPS or hosting with Node.js support)**
 
-## Step 3 — Chrome me load karo
+1. Upload the `server-node/` folder to your server and run `npm install`.
+2. Set the `API_KEY` environment variable, or update it in `server.js`. The key must match in the server, extension config, and dashboard.
+3. Start the server with `node server.js` (or use a process manager such as PM2). The dashboard is available at `http://YOUR-DOMAIN:3000/dashboard.html`. Configure HTTPS and a reverse proxy for production use.
 
-1. Chrome me `chrome://extensions` kholo → upar right me **Developer mode** ON karo.
-2. **Load unpacked** → `extension/` folder select karo.
-3. Extension ka icon dikhega — us par click karke popup kholo. Pehli baar me hi
-   activation server par chali jayegi (dashboard par dikhegi).
-4. Bulk send se pehle **web.whatsapp.com par login** kar lo (QR scan).
+## Step 2 — Configure the extension for each client
 
-## Bulk send kaise karein
+1. Open `extension/config.js` and set:
+   - `serverUrl` to your server URL, without a trailing slash.
+   - `serverType` to `"php"` or `"node"`.
+   - `apiKey` to the same secret key configured on the server.
+   - `client.domain`, `client.brand`, and `client.mobile` to the client's details.
+   - Add message templates in `templates`. The `{brand}` placeholder will be replaced with the client's brand.
+2. In `extension/manifest.json`, add your domain under `host_permissions`, replacing the example domain with your actual domain.
+3. For each client, edit the configuration files, create a separate ZIP of the `extension/` folder, and share it with them. Icons are optional.
 
-1. Popup me numbers daalo (ek line me ek number, 10 digit ya 91 ke saath).
-2. Template chuno (ya Custom message likho).
-3. Delay kam se kam 5–8 second rakho → **Start Bulk Send**.
-4. Progress popup me dikhega, aur har number ka result server par save hoga.
+## Step 3 — Load the extension in Chrome
 
-## ⚠️ Zaroori chetavni — WhatsApp ban ka risk
+1. Open `chrome://extensions` and turn on **Developer mode** in the top-right corner.
+2. Click **Load unpacked** and select the `extension/` folder.
+3. Click the extension icon to open its popup. On first use, it should send an activation to the server, which should appear on the dashboard.
+4. Before sending messages, sign in to `web.whatsapp.com` by scanning the QR code.
 
-WhatsApp par bulk/automated messages bhejna WhatsApp ke rules ke khilaaf hai —
-**number ban ho sakta hai**, kabhi-kabhi permanent. Isliye:
-- Roz 50–100 se zyada messages ek number se mat bhejo.
-- Delay 8 second se kam mat rakho, aur naya number pehle 1–2 hafte normal
-  chatting se warm up karo.
-- Sirf un numbers ko bhejo jinhone permission di ho ya jo tumhare customers hon.
-- Ye tool tumhare apne risk par use karo — ban hone ki zimmedari tumhari hogi.
+## How to send messages
 
-## Notes (imaandaari se)
+1. Enter phone numbers in the popup, one number per line (10 digits or with the country code `91`).
+2. Choose a template or write a custom message.
+3. Only message people who have agreed to receive your messages, and follow WhatsApp's official messaging policies.
+4. Click **Start Bulk Send**. Progress appears in the popup, and the result for each number is saved on the server.
 
-- **"System internet"**: Extension browser ke andar chalta hai, isliye wo browser
-  ke online/offline status + heartbeat bhejta hai. Poora OS-level monitoring
-  (system on/off, bina browser khole) extension se possible nahi hai — uske liye
-  alag desktop app chahiye hoti hai. Dashboard par "offline" ka matlab hai:
-  heartbeat ruk gaya = browser band ya system offline.
-- **Security**: v1 me sirf ek shared secret key hai. Dashboard ka URL kisi ko mat
-  do; chaaho to folder par `.htaccess` password laga do (PHP) — asli production
-  ke liye per-client keys + login wala version banana chahiye.
-- **WhatsApp Web badal sakta hai**: Agar WhatsApp apna send button ya page
-  structure badal de to `content.js` me button ka selector update karna padega.
-# whatsapp_bulk_extension
+## Important: WhatsApp account restrictions
+
+Bulk or automated messaging may violate WhatsApp's terms and can lead to account restrictions or a permanent ban. Use the official WhatsApp Business Platform for compliant messaging at scale, and only contact people who have opted in.
+
+## Notes and limitations
+
+- **Online status:** The extension runs inside the browser, so it reports the browser's online/offline status and heartbeat. It cannot monitor the entire operating system (such as whether the computer is on when the browser is closed). That would require a separate desktop app. On the dashboard, “offline” means the heartbeat has stopped, which could mean the browser is closed or the system is offline.
+- **Security:** Version 1 uses a single shared secret key. Keep the dashboard URL private. For PHP hosting, you can add password protection with `.htaccess`. For production use, add per-client API keys and dashboard login.
+- **WhatsApp Web changes:** If WhatsApp changes its Send button or page structure, you may need to update the button selector in `content.js`.
