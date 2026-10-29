@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bulk Sender — Dashboard (PHP)</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  h1 { font-size: 22px; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+  .card { background: #f2f2f2; border-radius: 10px; padding: 14px 18px; min-width: 140px; }
+  .card b { font-size: 26px; display: block; }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background: #f2f2f2; }
+  .online { color: green; font-weight: bold; }
+  .offline { color: #999; }
+</style>
+</head>
+<body>
+<h1>📊 WhatsApp Bulk Sender — Dashboard</h1>
+<p>Auto-refresh har 30 second me. Neeche: kitne browsers, kitne systems, kaun online hai, aur kis number par kaunsa template gaya.</p>
+
+<div class="cards">
+  <div class="card"><span>Total Browsers (activations)</span><b id="cBrowsers">–</b></div>
+  <div class="card"><span>Total Systems</span><b id="cSystems">–</b></div>
+  <div class="card"><span>Online Now</span><b id="cOnline">–</b></div>
+  <div class="card"><span>Messages Sent</span><b id="cSent">–</b></div>
+  <div class="card"><span>Failed</span><b id="cFailed">–</b></div>
+</div>
+
+<h2>Clients</h2>
+<div id="clients"></div>
+
+<h2>Activations — kis system par kis company ka extension hai</h2>
+<table>
+  <thead><tr><th>Brand</th><th>Domain</th><th>Mobile</th><th>System ID</th><th>Platform</th><th>Last Seen</th><th>Status</th></tr></thead>
+  <tbody id="acts"></tbody>
+</table>
+
+<h2>Sent Reports — kis number par kaunsa template gaya</h2>
+<table>
+  <thead><tr><th>Number</th><th>Template</th><th>Status</th><th>Brand</th><th>Time</th></tr></thead>
+  <tbody id="reps"></tbody>
+</table>
+
+<script>
+// ⚠️ Yahan wahi secret key daalo jo api.php me API_KEY hai
+const API_KEY = "change-this-secret-key";
+const api = (a) => "api.php?action=" + a + "&key=" + encodeURIComponent(API_KEY);
+
+function time(ts) {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+}
+
+async function load() {
+  try {
+    const stats = await (await fetch(api("stats"))).json();
+    document.getElementById("cBrowsers").textContent = stats.totalBrowsers;
+    document.getElementById("cSystems").textContent = stats.totalSystems;
+    document.getElementById("cOnline").textContent = stats.onlineNow;
+    document.getElementById("cSent").textContent = stats.sent;
+    document.getElementById("cFailed").textContent = stats.failed;
+    document.getElementById("clients").textContent =
+      Object.entries(stats.byClient).map(([k, v]) => k + ": " + v + " browser").join(" | ") || "—";
+
+    const acts = await (await fetch(api("activations"))).json();
+    const now = Date.now();
+    document.getElementById("acts").innerHTML = acts.map(a => {
+      const on = a.online && (now - a.lastSeen < 10 * 60 * 1000);
+      return "<tr><td>" + (a.client.brand || "") + "</td><td>" + (a.client.domain || "") +
+        "</td><td>" + (a.client.mobile || "") + "</td><td>" + a.deviceId +
+        "</td><td>" + (a.platform || "") + "</td><td>" + time(a.lastSeen) +
+        "</td><td class='" + (on ? "online" : "offline") + "'>" + (on ? "Online" : "Offline") + "</td></tr>";
+    }).join("");
+
+    const reps = await (await fetch(api("reports"))).json();
+    document.getElementById("reps").innerHTML = reps.map(r =>
+      "<tr><td>" + r.number + "</td><td>" + (r.template || "") + "</td><td>" + r.status +
+      "</td><td>" + ((r.client && r.client.brand) || "") + "</td><td>" + time(r.ts) + "</td></tr>"
+    ).join("");
+  } catch (e) { console.log("load failed", e); }
+}
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
