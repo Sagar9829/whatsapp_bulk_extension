@@ -97,3 +97,4 @@ WhatsApp par bulk/automated messages bhejna WhatsApp ke rules ke khilaaf hai —
   ke liye per-client keys + login wala version banana chahiye.
 - **WhatsApp Web badal sakta hai**: Agar WhatsApp apna send button ya page
   structure badal de to `content.js` me button ka selector update karna padega.
+# whatsapp_bulk_extension
